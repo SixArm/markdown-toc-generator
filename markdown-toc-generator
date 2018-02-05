@@ -6,8 +6,6 @@
 # Update a markdown file by autogenerating a table of contents,
 # based on the markdown headlines.
 #
-# Currently we just handle H2 headlines; we want to add more.
-#
 # Syntax:
 #
 #     markdown-toc-generator <file>
@@ -16,20 +14,20 @@
 #
 #     markdown-toc-generator example.md
 #
+# Limits:
+#
+#  * This does H2 headlines and lesser; this does not do H1 headlines.
+#
+#  * This needs each headline anchor href to be unique; this does not auto-number them.
+#
 #
 # ## Install
 #
-# This command uses Ruby, a Markdown parser, the GitHub HTML pipeline, and an HTML parser.
+# This command uses Ruby.
 #
 # Verify you have Ruby version 2.5 or better:
 #
 #     ruby -v
-#
-# Install dependencies:
-#
-#     gem install commonmarker
-#     gem install html-pipeline
-#     gem install nokogiri
 #
 # Copy this command to somewhere on your path such as:
 #
@@ -129,7 +127,6 @@
 #
 #     Lorem ipsum...
 #
-#
 # The GitHub automatic rendering typically adds more information, 
 # such as an SVG anchor image that shows/hides during hover.
 #
@@ -137,17 +134,14 @@
 # ## Tracking
 #
 # * Command: markdown-toc-generator
-# * Version: 1.5.0
+# * Version: 1.6.0
 # * Created: 2018-02-04
 # * Updated: 2018-02-06
-# * License: GPL
+# * License: GPLv3
 # * Contact: Joel Parker Henderson (joel@joelparkerhenderson.com)
 ##
 
-require "commonmarker"
-require "html/pipeline"
 require "tempfile"
-require "nokogiri"
 require "ostruct"
 
 ##
@@ -233,74 +227,42 @@ end
 #
 ##
 
+class Headline < OpenStruct
+
+  def to_markdown
+    indent + "* " + link + "\n"
+  end
+
+  def indent
+    "  " * (level.length - 2)
+  end
+
+  def link
+    "[#{text}](##{anchor})"
+  end
+
+  def anchor
+    text.downcase.gsub(/\W+/,'-')
+  end
+
+end
+
 module My
 
   module Markdown
 
     class String < ::String
 
-      # Massage a Markdown string as we like.
-      #
-      # Example:
-      #
-      #     massaged = markdown_string.massage
-      # 
-      # For now, we prefer to keep just the H2 headlines. This may change.
-      #
-      def massage
-        return My::Markdown::String.new(self.split(/\n/).grep(/^## /).join("\n"))
+      def toc
+        return scan(/^(##+) +(.+)\n/).map{|level, text| 
+          Headline.new(level: level, text: text).to_markdown 
+        }.join
       end
 
-      # Parse a Markdown string to a HTML TOC.
-      #
-      # Example:
-      #
-      #     html_toc = TOCAdapter.markdown_string_to_html_toc(markdown_string)
-      #
-      def to_html_toc
-        result = {}
-        Pipeline.call(self, {}, result)
-        return My::HTML::TOC.new(result[:toc])
+      def refresh_toc(toc_start, toc_stop) 
+        replace_between(toc, toc_start, toc_stop)
       end
 
-      # Parse a Markdown string to a Markdown TOC.
-      #
-      # Example:
-      #
-      #     markdown_toc = markdown_string.to_markdown_toc
-      #
-      # This combines the various pieces we want:
-      #
-      #   1. Start with a markdown string, such as via a README.md file.
-      #   2. Massage the markdown, such as extracting just our H2 headlines.
-      #   3. Call GitHub's HTML Pipeline to convert Markdown to a HTML TOC.
-      #   4. Use Nokogiri to convert the HTML TOC to a list of links.
-      #   5. Format the links using our preferred Markdown TOC format.
-      #
-      def to_markdown_toc
-        return massage.to_html_toc.to_markdown_toc
-      end
-
-      # Replace a Markdown table of contents.
-      #
-      # Example:
-      #
-      #    markdown_string = markdown_string.replace_toc(markdown_toc)
-      #
-      # This does our preferred syntax:
-      #
-      #   * Start with "TOC:\n"
-      #   * Stop with "^\n" i.e. a blank link.
-      #
-      # If you prefer a different syntax, you can adjust this here.
-      #
-      def replace_toc(markdown_toc)
-        replace_between(markdown_toc + "\n", /^TOC:\n/, /^\n/)
-      end
-
-    end
-
-    class TOC < String
     end
 
     class File < ::File
@@ -309,72 +271,26 @@ module My
         My::Markdown::String.new(read.scrub)
       end
 
-      def cook
-        markdown_string = slurp
-        markdown_toc = markdown_string.to_markdown_toc
-        rewrite(markdown_string.replace_toc(markdown_toc))
+      def refresh_toc(toc_start, toc_stop)
+        string = slurp
+        toc = string.toc
+        string = string.refresh_toc(toc_start, toc_stop)
+        rewrite(string)
       end
 
     end
 
   end
 
-  module HTML
-
-    class String < ::String
-    end
-
-    class TOC < String
-
-      # Parse a HTML TOC to a Markdown TOC.
-      #
-      # Example:
-      #
-      #     markdown_toc = html_toc.to_markdown_toc
-      #
-      # Currently this only supports all items at the same level.
-      # TODO: Improve this to handle H1, H2, H3, etc. with nesting.
-      #
-      def to_markdown_toc
-        return Nokogiri::HTML
-          .parse(self)
-            .css("li a")
-              .map{|anchor| 
-                "* [#{anchor.inner_html}](#{anchor["href"]})" 
-              }.join("\n")
-      end
-
-    end
-
-  end
-
-end
-
-##
-# 
-# GitHub pipeline
-#
-##
-
-Pipeline = HTML::Pipeline.new [ 
-  HTML::Pipeline::MarkdownFilter,
-  HTML::Pipeline::TableOfContentsFilter,
-]
-
-# Read a Markdown file, and output a Markdown TOC.
-#
-# Example:
-#
-#     markdown_toc = print_toc(markdown_file_path)
-#
-def print_toc(markdown_file_path)
-  file = My::Markdown::File.new(markdown_file_path, "r")
-  file.cook
 end
 
 # Main: process all the markdown file paths on the command line.
 def main
-  ARGV.each{|markdown_file_path| print_toc(markdown_file_path) }
+  markdown_file_path, toc_start, toc_stop = ARGV
+  toc_start ||= /^TOC:\s*\n/
+  toc_stop ||= /^\s*\n/
+  file = My::Markdown::File.new(markdown_file_path, "r")
+  file.refresh_toc(toc_start, toc_stop)
 end
 
 main

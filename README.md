@@ -11,26 +11,26 @@ Example:
 
     markdown-toc-generator example.md
 
+Limits:
+
+  * This does H2 headlines and lesser; this does not do H1 headlines.
+
+  * This needs each headline anchor href to be unique; this does not auto-number them.
+
 
 ## Install
 
-This command uses Ruby, a Markdown parser, the GitHub HTML pipeline, and an HTML parser.
+This command uses Ruby.
 
-Verify you have Ruby version 2.5 or better:
+Verify you have Ruby version 2.2 or better:
 
     ruby -v
-
-Install dependencies:
-
-    gem install commonmarker
-    gem install html-pipeline
-    gem install nokogiri
 
 Copy this command to somewhere on your path such as:
 
     curl https://raw.githubusercontent.com/SixArm/markdown-toc-generator/master/markdown-toc-generator --output /usr/local/bin/markdown-toc-generator
 
-TODO: transition this to a gem.
+TODO: transition this to a gem, then to Rust.
 
 
 ## How it works
@@ -132,9 +132,9 @@ such as an SVG anchor image that shows/hides during hover.
 ## Tracking
 
 * Command: markdown-toc-generator
-* Version: 1.5.0
+* Version: 1.6.0
 * Created: 2018-02-04
 * Updated: 2018-02-06
-* License: GPL
+* License: GPLv3
 * Contact: Joel Parker Henderson (joel@joelparkerhenderson.com)
 
