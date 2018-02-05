@@ -1,0 +1,359 @@
+#!/usr/bin/env ruby
+
+##
+# Markdown TOC generator
+#
+# Update a markdown file by autogenerating a table of contents,
+# based on the markdown headlines.
+#
+# Currently we just handle H2 headlines; we want to add more.
+#
+# Syntax:
+#
+#     markdown-toc-generator <file>
+#
+# Example:
+#
+#     markdown-toc-generator example.md
+#
+#
+# ## How it works
+#
+# The command parses the Markdown file using GitHub's HTML pipeline.
+#
+# Example Markdown headline:
+#
+#     ## Hello World
+#
+# The pipeline generates a headline anchor href string:
+#
+#     hello-world
+#
+# The command creates a markdown list item:
+#
+#     * [Hello World](#hello-world)
+#
+# The command searches the text for the abbreviation "TOC:"
+# that starts a line, and is on the line by itself.
+#
+#     TOC:
+#
+# The command replaces successive non-blank lines with the markdown list items:
+#
+#     TOC:
+#     * [Hello World](#hello-world)
+#
+#
+# ## Demo
+#
+# Demonstration Markdown file text, before the generator:
+#
+#     # Demo
+#
+#     TOC:
+#       
+#     ## Alpha
+#
+#     Lorem ipsum...
+#
+#     ## Bravo
+#     
+#     Lorem ipsum...
+#
+#     ## Charlie
+#
+#     Lorem ipsum...
+#
+# Example Markdown file text, after the generator:
+#
+#     # Demo
+#
+#     TOC:
+#     * [Alpha](#alpha)
+#     * [Bravo](#bravo)
+#     * [Charlie](#charlie)
+#       
+#     ## Alpha
+#
+#     Lorem ipsum...
+#
+#     ## Bravo
+#     
+#     Lorem ipsum...
+#
+#     ## Charlie
+#
+#     Lorem ipsum...
+#
+# Example of how GitHub renders the file, approximately:
+#
+#     <h1>Demo</h1>
+#
+#     TOC:
+#     <ul>
+#     <li><a href="#alpha">Alpha</a></li>
+#     <li><a href="#bravo">Bravo</a></li>
+#     <li><a href="#charlie">Charlie</a></li>
+#     </ul>
+#  
+#     <h2><a class="anchor" href="#alpha" id="user-content-alpha">Alpha</a></h2>
+#
+#     Lorem ipsum...
+#
+#     <h2><a class="anchor" href="#bravo" id="user-content-bravo">Bravo</a></h2>
+#     
+#     Lorem ipsum...
+#
+#     <h2><a class="anchor" href="#charlie" id="user-content-bravo">Charlie</a></h2>
+#
+#     Lorem ipsum...
+#
+#
+# The GitHub automatic rendering typically adds more information, 
+# such as an SVG anchor image that shows/hides during hover.
+#
+#
+# ## Tracking
+#
+# * Command: markdown-toc-generator
+# * Version: 1.5.0
+# * Created: 2018-02-04
+# * Updated: 2018-02-06
+# * License: GPL
+# * Contact: Joel Parker Henderson (joel@joelparkerhenderson.com)
+##
+
+require "commonmarker"
+require "html/pipeline"
+require "tempfile"
+require "nokogiri"
+require "ostruct"
+
+##
+#
+# Extensions
+#
+##
+
+class String
+
+  # Return the index immediately after the first occurrence 
+  # of the given substring orpattern (regexp) in str. 
+  #
+  # Return nil if not found. 
+  #
+  # The `target` parameter can be a string or a pattern (regexp).
+  # 
+  # The `offset` parameter specifies the position in the string 
+  # to begin the search; the default is 0 i.e. the string start.
+  #
+  # Examples:
+  #
+  #     "hello".index_after("ll") => 4
+  #
+  #     "hello".index_after(/[eo]/) => 2
+  #
+  def index_after(target, offset = 0)
+    i = index(target)
+    return nil if nil == i
+    length = case target
+    when String
+      target.length
+    when Regexp
+      m = match(target, offset)
+      m ? m.to_s.length : nil
+    else
+      raise ArgumentError
+    end
+    return i + length
+  end
+
+  # Replace the contents and taintedness of a string subsection
+  # with the corresponding values in `other_string`.
+  #
+  # The params `start_target` and `stop_target` can each be 
+  # a substring or pattern regexp.
+  #
+  # Examples:
+  #
+  #     "hello".replace_between("r", "e", "o") => "hero"
+  #
+  #     "hello".replace_between("r", /[eo]/, /[eo]/) => "hero"
+  #
+  def replace_between(other_string, start_target, stop_target)
+    inner_index = index_after(start_target)
+    return self if nil == inner_index
+    stop_index = index(stop_target, inner_index)
+    return self if nil == stop_index
+    return slice(0...inner_index) + other_string + slice(stop_index..-1)
+  end
+
+end
+
+class File
+
+  def rewrite(string)
+    raise ArgumentError if !string.kind_of?(String)
+    tempfile = Tempfile.new
+    begin
+      tempfile.write(string)
+      FileUtils.mv(tempfile.path, self.path)
+    ensure
+      tempfile.close
+      tempfile.unlink
+    end
+  end
+
+end
+
+##
+#
+# Adapters
+#
+##
+
+module My
+
+  module Markdown
+
+    class String < ::String
+
+      # Massage a Markdown string as we like.
+      #
+      # Example:
+      #
+      #     massaged = markdown_string.massage
+      # 
+      # For now, we prefer to keep just the H2 headlines. This may change.
+      #
+      def massage
+        return My::Markdown::String.new(self.split(/\n/).grep(/^## /).join("\n"))
+      end
+
+      # Parse a Markdown string to a HTML TOC.
+      #
+      # Example:
+      #
+      #     html_toc = TOCAdapter.markdown_string_to_html_toc(markdown_string)
+      #
+      def to_html_toc
+        result = {}
+        Pipeline.call(self, {}, result)
+        return My::HTML::TOC.new(result[:toc])
+      end
+
+      # Parse a Markdown string to a Markdown TOC.
+      #
+      # Example:
+      #
+      #     markdown_toc = markdown_string.to_markdown_toc
+      #
+      # This combines the various pieces we want:
+      #
+      #   1. Start with a markdown string, such as via a README.md file.
+      #   2. Massage the markdown, such as extracting just our H2 headlines.
+      #   3. Call GitHub's HTML Pipeline to convert Markdown to a HTML TOC.
+      #   4. Use Nokogiri to convert the HTML TOC to a list of links.
+      #   5. Format the links using our preferred Markdown TOC format.
+      #
+      def to_markdown_toc
+        return massage.to_html_toc.to_markdown_toc
+      end
+
+      # Replace a Markdown table of contents.
+      #
+      # Example:
+      #
+      #    markdown_string = markdown_string.replace_toc(markdown_toc)
+      #
+      # This does our preferred syntax:
+      #
+      #   * Start with "TOC:\n"
+      #   * Stop with "^\n" i.e. a blank link.
+      #
+      # If you prefer a different syntax, you can adjust this here.
+      #
+      def replace_toc(markdown_toc)
+        replace_between(markdown_toc + "\n", /^TOC:\n/, /^\n/)
+      end
+
+    end
+
+    class TOC < String
+    end
+
+    class File < ::File
+
+      def slurp
+        My::Markdown::String.new(read.scrub)
+      end
+
+      def cook
+        markdown_string = slurp
+        markdown_toc = markdown_string.to_markdown_toc
+        rewrite(markdown_string.replace_toc(markdown_toc))
+      end
+
+    end
+
+  end
+
+  module HTML
+
+    class String < ::String
+    end
+
+    class TOC < String
+
+      # Parse a HTML TOC to a Markdown TOC.
+      #
+      # Example:
+      #
+      #     markdown_toc = html_toc.to_markdown_toc
+      #
+      # Currently this only supports all items at the same level.
+      # TODO: Improve this to handle H1, H2, H3, etc. with nesting.
+      #
+      def to_markdown_toc
+        return Nokogiri::HTML
+          .parse(self)
+            .css("li a")
+              .map{|anchor| 
+                "* [#{anchor.inner_html}](#{anchor["href"]})" 
+              }.join("\n")
+      end
+
+    end
+
+  end
+
+end
+
+##
+# 
+# GitHub pipeline
+#
+##
+
+Pipeline = HTML::Pipeline.new [ 
+  HTML::Pipeline::MarkdownFilter,
+  HTML::Pipeline::TableOfContentsFilter,
+]
+
+# Read a Markdown file, and output a Markdown TOC.
+#
+# Example:
+#
+#     markdown_toc = print_toc(markdown_file_path)
+#
+def print_toc(markdown_file_path)
+  file = My::Markdown::File.new(markdown_file_path, "r")
+  file.cook
+end
+
+# Main: process all the markdown file paths on the command line.
+def main
+  ARGV.each{|markdown_file_path| print_toc(markdown_file_path) }
+end
+
+main
