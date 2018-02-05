@@ -135,6 +135,6 @@ such as an SVG anchor image that shows/hides during hover.
 * Version: 1.6.0
 * Created: 2018-02-04
 * Updated: 2018-02-06
-* License: GPLv3
+* License: Open source as described in the file LICENSE.md
 * Contact: Joel Parker Henderson (joel@joelparkerhenderson.com)
 
