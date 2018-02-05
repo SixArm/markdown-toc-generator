@@ -1,7 +1,7 @@
 # Markdown TOC generator
 
 Update a markdown file by autogenerating a table of contents
-based on the markdown headlines; currently we just do H2.
+based on the markdown headlines.
 
 Syntax:
 
