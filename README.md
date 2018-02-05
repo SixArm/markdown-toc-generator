@@ -12,6 +12,25 @@ Example:
     markdown-toc-generator example.md
 
 
+## Install
+
+This command uses Ruby, a Markdown parser, the GitHub HTML pipeline, and an HTML parser.
+
+Verify you have Ruby version 2.5 or better:
+
+    ruby -v
+
+Install dependencies:
+
+    gem install commonmarker
+    gem install html-pipeline
+    gem install nokogiri
+
+Copy this command to somewhere on your path such as:
+
+    curl https://raw.githubusercontent.com/SixArm/markdown-toc-generator/master/markdown-toc-generator --output /usr/local/bin/markdown-toc-generator
+
+
 ## How it works
 
 The command parses the Markdown file using GitHub's HTML pipeline.
