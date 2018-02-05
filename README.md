@@ -30,6 +30,8 @@ Copy this command to somewhere on your path such as:
 
     curl https://raw.githubusercontent.com/SixArm/markdown-toc-generator/master/markdown-toc-generator --output /usr/local/bin/markdown-toc-generator
 
+TODO: transition this to a gem.
+
 
 ## How it works
 
