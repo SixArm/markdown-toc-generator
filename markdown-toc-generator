@@ -272,10 +272,7 @@ module My
       end
 
       def refresh_toc(toc_start, toc_stop)
-        string = slurp
-        toc = string.toc
-        string = string.refresh_toc(toc_start, toc_stop)
-        rewrite(string)
+        rewrite(slurp.refresh_toc(toc_start, toc_stop))
       end
 
     end
