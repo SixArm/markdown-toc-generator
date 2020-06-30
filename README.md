@@ -5,18 +5,20 @@ based on the markdown headlines.
 
 Syntax:
 
-    markdown-toc-generator <file>
+```terminal
+markdown-toc-generator <file>
+```
 
 Example:
 
-    markdown-toc-generator example.md
+```terminal
+markdown-toc-generator example.md
+```
 
 Limits:
 
-  * This does H2 headlines and lesser; this does not do H1 headlines.
-
-  * This needs each headline anchor href to be unique; this does not auto-number them.
-
+* This does H2 headlines and lesser; this does not do H1 headlines.
+* This needs each headline anchor href to be unique; this does not auto-number them.
 
 ## Install
 
@@ -24,14 +26,18 @@ This command uses Ruby.
 
 Verify you have Ruby version 2.2 or better:
 
-    ruby -v
+
+```terminal
+ruby -v
+```
 
 Copy this command to somewhere on your path such as:
 
-    curl https://raw.githubusercontent.com/SixArm/markdown-toc-generator/master/markdown-toc-generator --output /usr/local/bin/markdown-toc-generator
+```terminal
+curl https://raw.githubusercontent.com/SixArm/markdown-toc-generator/master/markdown-toc-generator --output /usr/local/bin/markdown-toc-generator
+```
 
 TODO: transition this to a gem, then to Rust.
-
 
 ## How it works
 
@@ -39,95 +45,108 @@ The command parses the Markdown file using GitHub's HTML pipeline.
 
 Example Markdown headline:
 
-    ## Hello World
+```markdown
+## Hello World
+```
 
 The pipeline generates a headline anchor href string:
 
-    hello-world
+```text
+hello-world
+```
 
 The command creates a markdown list item:
 
-    * [Hello World](#hello-world)
+```markdown
+* [Hello World](#hello-world)
+```
 
 The command searches the text for the abbreviation "TOC:"
 that starts a line, and is on the line by itself.
 
-    TOC:
+```markdown
+TOC:
+```
 
 The command replaces successive non-blank lines with the markdown list items:
 
-    TOC:
-    * [Hello World](#hello-world)
-
+```markdown
+TOC:
+* [Hello World](#hello-world)
+```
 
 ## Demo
 
 Demonstration Markdown file text, before the generator:
 
-    # Demo
+```markdown
+# Demo
 
-    TOC:
+TOC:
       
-    ## Alpha
+## Alpha
 
-    Lorem ipsum...
+Lorem ipsum...
 
-    ## Bravo
+## Bravo
     
-    Lorem ipsum...
+Lorem ipsum...
 
-    ## Charlie
+## Charlie
 
-    Lorem ipsum...
+Lorem ipsum...
+```
 
 Example Markdown file text, after the generator:
 
-    # Demo
+```markdown
+# Demo
 
-    TOC:
-    * [Alpha](#alpha)
-    * [Bravo](#bravo)
-    * [Charlie](#charlie)
+TOC:
+* [Alpha](#alpha)
+* [Bravo](#bravo)
+* [Charlie](#charlie)
       
-    ## Alpha
+## Alpha
 
-    Lorem ipsum...
+Lorem ipsum...
 
-    ## Bravo
+## Bravo
     
-    Lorem ipsum...
+Lorem ipsum...
 
-    ## Charlie
+## Charlie
 
-    Lorem ipsum...
+Lorem ipsum...
+```
 
 Example of how GitHub renders the file, approximately:
 
-    <h1>Demo</h1>
+```html
+<h1>Demo</h1>
 
-    TOC:
-    <ul>
-    <li><a href="#alpha">Alpha</a></li>
-    <li><a href="#bravo">Bravo</a></li>
-    <li><a href="#charlie">Charlie</a></li>
-    </ul>
+TOC:
+<ul>
+<li><a href="#alpha">Alpha</a></li>
+<li><a href="#bravo">Bravo</a></li>
+<li><a href="#charlie">Charlie</a></li>
+</ul>
  
-    <h2><a class="anchor" href="#alpha" id="user-content-alpha">Alpha</a></h2>
+<h2><a class="anchor" href="#alpha" id="user-content-alpha">Alpha</a></h2>
 
-    Lorem ipsum...
+Lorem ipsum...
 
-    <h2><a class="anchor" href="#bravo" id="user-content-bravo">Bravo</a></h2>
+<h2><a class="anchor" href="#bravo" id="user-content-bravo">Bravo</a></h2>
     
-    Lorem ipsum...
+Lorem ipsum...
 
-    <h2><a class="anchor" href="#charlie" id="user-content-bravo">Charlie</a></h2>
+<h2><a class="anchor" href="#charlie" id="user-content-bravo">Charlie</a></h2>
 
-    Lorem ipsum...
-
+Lorem ipsum...
+```
 
 The GitHub automatic rendering typically adds more information, 
 such as an SVG anchor image that shows/hides during hover.
-
 
 ## Tracking
 
@@ -137,4 +156,3 @@ such as an SVG anchor image that shows/hides during hover.
 * Updated: 2018-02-06
 * License: Open source as described in the file LICENSE.md
 * Contact: Joel Parker Henderson (joel@joelparkerhenderson.com)
-
